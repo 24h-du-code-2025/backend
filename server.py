@@ -67,7 +67,7 @@ def display_weather(
 @tool
 def get_clients(page: Optional[int], term: Optional[str]):
     """Searches for clients using a provided search term"""
-    return requests.get(HOTEL_API_KEY + f"/api/clients/", params={"page": page, term: "term"}, headers=API_HEADERS).text
+    return requests.get(HOTEL_API_KEY + f"/api/clients/", params={"page": page, "search": term}, headers=API_HEADERS).text
 
 
 @tool
