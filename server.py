@@ -4,6 +4,7 @@ import os
 import requests
 from dotenv import dotenv_values
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel, Field, validator
@@ -21,7 +22,10 @@ from typing import List, Dict, Optional, Literal
 from typing_extensions import TypedDict
 
 from utils import get_weather_info, extract_events
-
+from datetime import date
+import calendar
+my_date = date.today()
+day = calendar.day_name[my_date.weekday()] + " " +  my_date.strftime('%d') + " " + calendar.month_name[my_date.month] + ", " + my_date.strftime('%Y')
 load_dotenv()
 HOTEL_API_URL = getenv("HOTEL_API_URL")
 HOTEL_API_KEY = getenv("HOTEL_API_KEY")
@@ -393,7 +397,7 @@ def call_agent(user_input: str, session):
 
 memory = MemorySaver()
 
-sys_prompt = """
+sys_prompt = f"""
 # System Prompt: Hotel Concierge AI
 
 You are an AI Hotel Concierge designed to assist guests during their stay. Your role is to provide helpful, courteous, and efficient service while maintaining the professionalism expected of a high-quality hotel concierge.
@@ -450,11 +454,14 @@ Some data can be returned to the user using the corresponding tool,
 if a tool is available to return structured data, use it
 try most of the time to use a tool to answer user prompts
 never display markdown data or logn texts, if there is a response containing an object or a known stucture, use a tool 
+
+current date is {day}
 """
 
 graph = create_react_agent(model, tools=tools, checkpointer=memory, prompt=sys_prompt)
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 app.config['SECRET_KEY'] = 'secret!'
 sio = SocketIO(app, cors_allowed_origins='*')
 
@@ -494,7 +501,7 @@ def convert_mp3_to_wav(mp3_file, wav_file=None):
         return None
 
 
-@app.route("/convert-speech-to-text")
+@app.post("/convert-speech-to-text")
 def convert_speech_to_text():
     
     if 'audio' not in request.files:
@@ -502,18 +509,19 @@ def convert_speech_to_text():
     
     audio_file = request.files['audio']
     
-    if not audio_file.filename.endswith(('.mp3', '.wav', '.m4a', '.ogg')):
-        return jsonify({"error": "Invalid file format. Please upload an MP3, WAV, M4A, or OGG file."}), 400
+    # if not audio_file.filename.endswith(('.mp3', '.wav', '.m4a', '.ogg')):
+    #     return jsonify({"error": "Invalid file format. Please upload an MP3, WAV, M4A, or OGG file."}), 400
 
     temp_audio_path = f"temp_{audio_file.filename}"
     audio_file.save(temp_audio_path)
 
     if temp_audio_path.endswith('.mp3'):
-        wav_path = convert_mp3_to_wav(temp_audio_path)
+        temp_audio_path = convert_mp3_to_wav(temp_audio_path)
 
     try:
-        result = model.transcribe(wav_path)
-        os.remove(wav_path)  # Clean up temporary file
+        result = speech_to_text_model.transcribe(temp_audio_path, language="fr")
+        print(temp_audio_path)
+        os.remove(temp_audio_path)  # Clean up temporary file
         return jsonify({"text": result["text"]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500

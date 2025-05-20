@@ -12,3 +12,6 @@ langchain-core~=0.3.47
 requests~=2.32.3
 bs4~=0.0.2
 beautifulsoup4~=4.13.3
+ffmpeg~=1.4
+openai-whisper @ git+https://github.com/openai/whisper.git@dd985ac4b90cafeef8712f2998d62c59c3e62d22
+flask-cors~=6.0.0
